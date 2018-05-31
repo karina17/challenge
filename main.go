@@ -12,6 +12,7 @@ import (
 func LatestVersions(releases []*semver.Version, minVersion *semver.Version) []*semver.Version {
 	var versionSlice []*semver.Version
 	semver.Sort(releases)
+
 	// This is just an example structure of the code, if you implement this interface, the test cases in main_test.go are very easy to run
 	for _, r := range releases {
 		if !r.LessThan(*minVersion) {
@@ -20,9 +21,10 @@ func LatestVersions(releases []*semver.Version, minVersion *semver.Version) []*s
 	}
 
 	var results []*semver.Version
-	var currentMajor = versionSlice[0].Major
-	var currentMinor = versionSlice[0].Minor
 	var currentVersion = versionSlice[0]
+	var currentMajor = currentVersion.Major
+	var currentMinor = currentVersion.Minor
+
 	for _, v := range versionSlice {
 		if v.Major != currentMajor || v.Minor != currentMinor {
 			currentMajor = v.Major
@@ -33,18 +35,16 @@ func LatestVersions(releases []*semver.Version, minVersion *semver.Version) []*s
 	}
 	results = append(results, currentVersion)
 
-	return reverse(results)
+	reverse(results)
+
+	return results
 }
 
-func reverse(numbers []*semver.Version) []*semver.Version {
-	if len(numbers) < 2 {
-		return numbers
+func reverse(a []*semver.Version) {
+	for i := len(a)/2-1; i >= 0; i-- {
+		opp := len(a)-1-i
+		a[i], a[opp] = a[opp], a[i]
 	}
-	newNumbers := make([]*semver.Version, len(numbers))
-	for i, j := 0, len(numbers)-1; i < j; i, j = i+1, j-1 {
-		newNumbers[i], newNumbers[j] = numbers[j], numbers[i]
-	}
-	return newNumbers
 }
 
 // Here we implement the basics of communicating with github through the library as well as printing the version
@@ -57,7 +57,8 @@ func getReleases(username string, repository string, minVersion *semver.Version)
 	opt := &github.ListOptions{PerPage: 10}
 	releases, _, err := client.Repositories.ListReleases(ctx, username, repository, opt)
 	if err != nil {
-		return nil // is this really a good way?
+		// return nil // is this really a good way?
+		fmt.Println(err.Error())
 	}
 
 	allReleases := make([]*semver.Version, len(releases))
@@ -75,10 +76,12 @@ func main() {
 	minVersion := semver.New("1.8.0")
 	allReleases := getReleases("kubernetes", "kubernetes", minVersion)
 	versionSliceK := LatestVersions(allReleases, minVersion)
+
 	minVersion = semver.New("2.2.0")
 	allReleases = getReleases("prometheus", "prometheus", minVersion)
 	versionSliceP := LatestVersions(allReleases, minVersion)
 
 	fmt.Printf("latest versions of kubernetes/kubernetes: %s", versionSliceK)
 	fmt.Printf("\nlatest versions of prometheus/prometheus: %s", versionSliceP)
+
 }
